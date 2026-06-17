@@ -17,6 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from job.views import JobCreate, JobDetail
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/jobs/', JobCreate.as_view(), name='job-create'),
+    path('api/jobs/<int:pk>/', JobDetail.as_view(), name='job-detail'),
 ]
