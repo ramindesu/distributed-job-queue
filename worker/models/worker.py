@@ -20,7 +20,7 @@ class Worker(models.Model):
     def is_alive(self):
         return (
             self.status == self.Status.ONLINE
-            and self.last_heartbeat >= timezone.now - timedelta(minutes=5)
+            and self.last_heartbeat >= timezone.now() - timedelta(minutes=5)
         )
 
     def __str__(self):
