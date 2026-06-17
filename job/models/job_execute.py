@@ -15,7 +15,7 @@ class JobExecution(models.Model):
     )
 
     worker = models.ForeignKey(
-        "workers.Worker",
+        "worker.Worker",
         on_delete=models.SET_NULL,
         null=True,
         related_name="executions",
