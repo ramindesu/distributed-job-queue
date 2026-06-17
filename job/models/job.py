@@ -14,7 +14,11 @@ class Job(models.Model):
         RUNNING = "running", "Running"
         COMPLETED = "completed", "Completed"
         FAILED = "failed", "Failed"
-
+    idempotency_key = models.UUIDField(
+        unique=True,
+        null=True,
+        blank=True,
+    )
     type = models.CharField(
         max_length=50,
         choices=JobType.choices,
