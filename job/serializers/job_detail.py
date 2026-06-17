@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from worker.models.worker import Worker
-from models.job import Job
-from job_execution import JobExecutionSerializer
+from ..models.job import Job
+from .job_execution import JobExecutionSerializer
 
 class WorkerDetailSerializer(serializers.ModelSerializer):
     class Meta:
