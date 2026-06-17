@@ -28,7 +28,8 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-# Application definition
+APPS = ['job' , 'worker']
+PACKAGES = ['rest_framework']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -37,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    *APPS,
+    *PACKAGES
 ]
 
 MIDDLEWARE = [
