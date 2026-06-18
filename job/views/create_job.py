@@ -6,7 +6,7 @@ from ..serializers import JobCreateSerializer
 from ..services import create_job
 
 
-class JobCreate(CreateAPIView):
+class JobCreateView(CreateAPIView):
     serializer_class = JobCreateSerializer
 
     def perform_create(self, serializer):

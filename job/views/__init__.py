@@ -1,5 +1,5 @@
-from .create_job import JobCreate
-from .job_detail import JobDetail
+from .create_job import JobCreateView
+from .job_detail import JobDetailView
 from .claim_job import ClaimJobView
 
-__all__ = ["JobCreate", "JobDetail","ClaimJobView"]
+__all__ = ["JobCreateView", "JobDetailView","ClaimJobView"]

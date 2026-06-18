@@ -4,6 +4,6 @@ from ..models import Job
 from ..serializers import JobDetailSerializer
 
 
-class JobDetail(RetrieveAPIView):
+class JobDetailView(RetrieveAPIView):
     serializer_class = JobDetailSerializer
     queryset = Job.objects.select_related("worker").prefetch_related("executions")
