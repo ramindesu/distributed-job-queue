@@ -1,19 +1,25 @@
 from django.utils import timezone
+from django.db import transaction
 
 from job.models.job import Job
 
 
 def start_job(job: Job) -> Job:
-    if job.status != Job.Status.CLAIMED:
-        raise ValueError("must be claimed first")
-    job.status = Job.Status.RUNNING
-    job.started_at = timezone.now()
+    with transaction.atomic():
 
-    job.save(
-        update_fields=[
-            "status",
-            "started_at",
-        ]
-    )
+        job = Job.objects.select_for_update().get(pk=job.pk)
+        
+        if job.status != Job.Status.CLAIMED:
+            raise ValueError(f"Job must be CLAIMED to start. Current status: {job.status}")
+        
+        job.status = Job.Status.RUNNING
+        job.started_at = timezone.now()
 
-    return job
+        job.save(
+            update_fields=[
+                "status",
+                "started_at",
+            ]
+        )
+
+        return job
