@@ -4,7 +4,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from services.claim_job import claim_job
 from serializers.job_detail import JobDetailSerializer
-
+from worker.models import Worker
 
 class ClaimJobView(APIView):
     def post(self, request):
@@ -15,7 +15,7 @@ class ClaimJobView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        worker = get_object_or_404(worker, pk=worker_id)
+        worker = get_object_or_404(Worker, pk=worker_id)
         job = claim_job(worker)
         if not job:
             return Response(
