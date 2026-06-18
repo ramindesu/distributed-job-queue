@@ -21,6 +21,6 @@ from job.views import JobCreate, JobDetail
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/jobs/',include("job.url")),
-    path('api/workers/',include("worker.url")),
+    path('api/jobs/',include("job.urls")),
+    path('api/workers/',include("worker.urls")),
 ]
