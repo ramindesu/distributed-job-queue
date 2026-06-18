@@ -8,6 +8,13 @@ class Job(models.Model):
         SEND_EMAIL = "send_email", "Send Email"
         GENERATE_REPORT = "generate_report", "Generate Report"
         RESERVE_TICKET = "reserve_ticket", "Reserve Ticket"
+    
+
+    JOB_TYPE_TIMEOUTS = {
+        JobType.SEND_EMAIL: 5,        
+        JobType.GENERATE_REPORT: 30, 
+        JobType.RESERVE_TICKET: 10,   
+    }
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -71,6 +78,19 @@ class Job(models.Model):
             return False
 
         return self.claimed_at < timezone.now() - timedelta(minutes=5)
+    
+    @property
+    def execution_expired(self):
+        """Check if job execution has exceeded timeout"""
+        if not self.started_at or self.status != self.Status.RUNNING:
+            return False
+        
+        timeout_minutes = self.JOB_TYPE_TIMEOUTS.get(self.type, 30)  # Default 30 min
+        return self.started_at < timezone.now() - timedelta(minutes=timeout_minutes)
+    
+    def get_execution_timeout_minutes(self):
+        """Get execution timeout for this job type"""
+        return self.JOB_TYPE_TIMEOUTS.get(self.type, 30)
 
     def __str__(self):
         return f"Job #{self.id} ({self.type}) - {self.status}"
