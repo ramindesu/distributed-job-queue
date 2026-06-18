@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path , include
 
-from job.views import JobCreate, JobDetail
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
