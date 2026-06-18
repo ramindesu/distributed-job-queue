@@ -2,9 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from services.claim_job import claim_job
-from serializers.job_detail import JobDetailSerializer
-from worker.models import Worker
+from job.services import claim_job
+from job.serializers.job_detail import JobDetailSerializer
+from worker.models.worker import Worker
 
 class ClaimJobView(APIView):
     def post(self, request):
