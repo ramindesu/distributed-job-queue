@@ -12,7 +12,7 @@ class Worker(models.Model):
     status = models.CharField(
         max_length=15, choices=Status.choices, default=Status.ONLINE, db_index=True
     )
-    last_heartbeat = models.DateTimeField()
+    last_heartbeat = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
