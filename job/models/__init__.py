@@ -1,3 +1,3 @@
 from .job import Job
-from .job_execute import JobExecution
+from .job_execution import JobExecution
 __all__ = ['Job' , 'JobExecution']

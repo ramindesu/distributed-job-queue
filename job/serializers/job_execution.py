@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.job_execute import JobExecution
+from ..models.job_execution import JobExecution
 
 
 class JobExecutionSerializer(serializers.ModelSerializer):
