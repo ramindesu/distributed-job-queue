@@ -81,15 +81,15 @@ class Job(models.Model):
     
     @property
     def execution_expired(self):
-        """Check if job execution has exceeded timeout"""
+
         if not self.started_at or self.status != self.Status.RUNNING:
             return False
         
-        timeout_minutes = self.JOB_TYPE_TIMEOUTS.get(self.type, 30)  # Default 30 min
+        timeout_minutes = self.JOB_TYPE_TIMEOUTS.get(self.type, 30) 
         return self.started_at < timezone.now() - timedelta(minutes=timeout_minutes)
     
     def get_execution_timeout_minutes(self):
-        """Get execution timeout for this job type"""
+
         return self.JOB_TYPE_TIMEOUTS.get(self.type, 30)
 
     def __str__(self):
@@ -97,3 +97,11 @@ class Job(models.Model):
 
     class Meta:
         ordering = ["id"]
+        indexes = [
+
+                models.Index(
+                    fields=['created_at'],
+                    condition=models.Q(status='pending'), 
+                    name='pending_jobs_idx'
+                )
+            ]
