@@ -16,6 +16,7 @@ from job.services import (
     process_next_job,
 )
 from job.services.process_next_job import _reclaim_expired_jobs
+from django.db import connection
 
 
 class JobCreationRaceConditionTest(TransactionTestCase):
@@ -36,6 +37,8 @@ class JobCreationRaceConditionTest(TransactionTestCase):
                 results.append((job.id, created))
             except Exception as e:
                 errors.append(str(e))
+            finally:
+                connection.close()
 
         threads = []
         for _ in range(10):
@@ -85,6 +88,8 @@ class JobClaimingRaceConditionTest(TransactionTestCase):
                     claimed_jobs.append((worker.id, job.id))
             except Exception as e:
                 errors.append(str(e))
+            finally:
+                connection.close()
 
         threads = []
         for i in range(10):
@@ -132,6 +137,8 @@ class JobStateTransitionRaceConditionTest(TransactionTestCase):
                 successes.append(("start", job.status))
             except Exception as e:
                 errors.append(("start", str(e)))
+            finally:
+                connection.close()
 
         def complete_job_thread():
             try:
@@ -139,6 +146,8 @@ class JobStateTransitionRaceConditionTest(TransactionTestCase):
                 successes.append(("complete", job.status))
             except Exception as e:
                 errors.append(("complete", str(e)))
+            finally:
+                connection.close()
 
         thread1 = threading.Thread(target=start_job_thread)
         thread2 = threading.Thread(target=complete_job_thread)
@@ -185,6 +194,8 @@ class JobRetryRaceConditionTest(TransactionTestCase):
                 results.append(result_job.retry_count)
             except Exception as e:
                 errors.append(str(e))
+            finally:
+                connection.close()
 
         threads = []
         for _ in range(3):
