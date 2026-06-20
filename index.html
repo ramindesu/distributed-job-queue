@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Job Queue Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f8fafc; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Badge Styles */
+        .status-badge { 
+            display: inline-flex; align-items: center; gap: 0.375rem;
+            padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+        
+        /* Status Colors */
+        .status-pending { background: #fef9c3; color: #854d0e; }
+        .status-pending .status-dot { background: #eab308; }
+        
+        .status-claimed { background: #ffedd5; color: #9a3412; }
+        .status-claimed .status-dot { background: #f97316; }
+        
+        .status-running { background: #dbeafe; color: #1e40af; }
+        .status-running .status-dot { background: #3b82f6; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-completed .status-dot { background: #22c55e; }
+        
+        .status-failed { background: #fee2e2; color: #991b1b; }
+        .status-failed .status-dot { background: #ef4444; }
+        
+        .status-online { background: #dcfce7; color: #166534; }
+        .status-online .status-dot { background: #22c55e; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        
+        .status-offline { background: #fee2e2; color: #991b1b; }
+        .status-offline .status-dot { background: #ef4444; }
+
+        /* Toast Animation */
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-animate { animation: slideIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg">
+                    <i class="fas fa-network-wired"></i>
+                </div>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">
+                    Distributed Queue Monitor
+                </h1>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-500 font-medium">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                Live Sync Active
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-plus-circle text-indigo-500"></i> Dispatch New Task
+                </h2>
+            </div>
+            <div class="p-6">
+                <form id="jobForm" class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-4 space-y-1">
+                        <label class="block text-sm font-semibold text-slate-700">Task Type</label>
+                        <select id="jobType" class="w-full rounded-lg border-slate-300 bg-slate-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                            <option value="send_email">📧 Send Email</option>
+                            <option value="generate_report">📊 Generate Report</option>
+                            <option value="reserve_ticket">🎟️ Reserve Ticket</option>
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-4 space-y-1">
+                        <label class="block text-sm font-semibold text-slate-700">Idempotency Key <span class="text-slate-400 font-normal">(Optional)</span></label>
+                        <input type="text" id="jobKey" placeholder="e.g., req-778899" class="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                    </div>
+
+                    <div class="md:col-span-12 space-y-1">
+                        <label class="block text-sm font-semibold text-slate-700">Payload (JSON)</label>
+                        <textarea id="jobPayload" rows="2" class="w-full rounded-lg border border-slate-300 bg-slate-900 text-green-400 px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">{"recipient": "test@example.com"}</textarea>
+                    </div>
+                    
+                    <div class="md:col-span-12 flex justify-end">
+                        <button type="submit" id="submitBtn" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white px-8 py-2.5 rounded-lg font-semibold shadow-md shadow-indigo-200 transition-all flex items-center gap-2 transform active:scale-95">
+                            <i class="fas fa-paper-plane"></i> Dispatch Job
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-1 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-server text-emerald-500"></i> Active Workers
+                    </h2>
+                    <span id="workerCount" class="bg-emerald-100 text-emerald-700 py-1 px-3 rounded-full text-xs font-bold">0 Online</span>
+                </div>
+                
+                <div id="workersList" class="flex flex-col gap-3 overflow-y-auto max-h-[500px] pr-2">
+                    </div>
+            </div>
+
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-tasks text-blue-500"></i> Queue Pipeline
+                    </h2>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">ID</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Task Type</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Worker</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobsList" class="bg-white divide-y divide-slate-100">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 flex flex-col gap-3 z-50"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        // --- Custom Toast Notification ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-emerald-500',
+                error: 'bg-red-500',
+                warning: 'bg-amber-500'
+            };
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+
+            toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg shadow-${colors[type].split('-')[1]}-200 flex items-center gap-3 font-medium text-sm toast-animate`;
+            toast.innerHTML = `<i class="fas ${icons[type]} text-lg"></i> ${message}`;
+            
+            container.appendChild(toast);
+            
+            // Remove toast after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Form Submission ---
+        document.getElementById('jobForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const originalBtnHtml = btn.innerHTML;
+            
+            // Loading state
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Dispatching...`;
+            btn.disabled = true;
+
+            const payloadStr = document.getElementById('jobPayload').value;
+            let payloadObj;
+            try { 
+                payloadObj = JSON.parse(payloadStr); 
+            } catch (err) { 
+                showToast('Invalid JSON format in Payload!', 'error'); 
+                btn.innerHTML = originalBtnHtml;
+                btn.disabled = false;
+                return; 
+            }
+
+            const data = {
+                type: document.getElementById('jobType').value,
+                payload: payloadObj
+            };
+            
+            const key = document.getElementById('jobKey').value;
+            if (key) data.idempotency_key = key;
+
+            try {
+                const res = await fetch(`${API_BASE}/jobs/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if(res.ok) {
+                    const responseData = await res.json();
+                    if(res.status === 200) {
+                        showToast(`Job already exists (Idempotent: #${responseData.id})`, 'warning');
+                    } else {
+                        showToast(`Job #${responseData.id} dispatched successfully!`, 'success');
+                    }
+                    document.getElementById('jobKey').value = '';
+                    fetchJobs();
+                } else {
+                    showToast('Failed to connect to backend.', 'error');
+                }
+            } catch (err) {
+                showToast('Network error! Is Django running?', 'error');
+            } finally {
+                btn.innerHTML = originalBtnHtml;
+                btn.disabled = false;
+            }
+        });
+
+        // --- Fetch Workers ---
+        async function fetchWorkers() {
+            try {
+                const res = await fetch(`${API_BASE}/workers/`);
+                if(!res.ok) return;
+                const workers = await res.json();
+                
+                const onlineCount = workers.filter(w => w.status === 'online').length;
+                document.getElementById('workerCount').innerText = `${onlineCount} Online`;
+                
+                const container = document.getElementById('workersList');
+                
+                if (workers.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center p-6 border-2 border-dashed border-slate-200 rounded-xl text-slate-400">
+                            <i class="fas fa-server text-3xl mb-2"></i>
+                            <p class="text-sm">No workers connected</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = workers.map(w => `
+                    <div class="bg-white p-4 border border-slate-200 rounded-xl flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-slate-100 p-2 rounded-lg text-slate-500">
+                                <i class="fas fa-microchip"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800">${w.name}</p>
+                                <p class="text-[11px] text-slate-500 font-mono mt-0.5"><i class="far fa-clock"></i> ${new Date(w.last_heartbeat).toLocaleTimeString('en-US')}</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-${w.status}">
+                            <span class="status-dot"></span>
+                            ${w.status}
+                        </span>
+                    </div>
+                `).join('');
+            } catch (err) { console.error('Worker fetch error:', err); }
+        }
+
+        // --- Fetch Jobs ---
+        async function fetchJobs() {
+            try {
+                const res = await fetch(`${API_BASE}/jobs/list/`);
+                if(!res.ok) return;
+                const jobs = await res.json();
+                const tbody = document.getElementById('jobsList');
+                
+                if (jobs.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-slate-400">
+                                <i class="fas fa-inbox text-4xl mb-3 text-slate-300"></i>
+                                <p>The queue is currently empty.</p>
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = jobs.map(j => `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-md">#${j.id}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-600">
+                            ${j.type.replace('_', ' ')}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="status-badge status-${j.status}">
+                                <span class="status-dot"></span>
+                                ${j.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            ${j.worker_name 
+                                ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-bold"><i class="fas fa-server text-xs"></i> ${j.worker_name}</span>` 
+                                : '<span class="text-slate-400 italic">Unassigned</span>'}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) { console.error('Job fetch error:', err); }
+        }
+
+        // --- Initialize & Start Polling ---
+        fetchWorkers();
+        fetchJobs();
+        
+        setInterval(() => {
+            fetchWorkers();
+            fetchJobs();
+        }, 1500); // Polling every 1.5s for snappy feel
+    </script>
+</body>
+</html>
